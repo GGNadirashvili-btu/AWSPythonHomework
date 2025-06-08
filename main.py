@@ -8,6 +8,7 @@ import sys
 import math
 import ipaddress
 import boto3
+from rds_manager import create_rds_instance, open_db_port_all_ips
 from tasks.network import (
     validate_cidr,
     create_vpc,
@@ -44,6 +45,29 @@ def parse_args():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="AWS CLI Tool")
+    parser.add_argument('--create-rds', action='store_true', help='Create RDS instance')
+    parser.add_argument('--db-identifier', type=str)
+    parser.add_argument('--db-username', type=str)
+    parser.add_argument('--db-password', type=str)
+    parser.add_argument('--security-group-id', type=str)
+
+    args = parser.parse_args()
+
+    if args.create_rds:
+        if not all([args.db_identifier, args.db_username, args.db_password, args.security_group_id]):
+            print("Missing required arguments.")
+            return
+        open_db_port_all_ips(args.security_group_id)
+        endpoint = create_rds_instance(
+            args.db_identifier,
+            args.db_username,
+            args.db_password,
+            args.security_group_id
+        )
+        print(f"\n✅ Connect to your DB at: {endpoint}")
+    
+    # ------------------
     args = parse_args()
     total_subnets = args.subnet_count * 2
     if total_subnets > 200:
